@@ -1,6 +1,6 @@
 {
   "name": "js-image-compress",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "description": "JavaScript image compressor.typescript support.",
   "type": "module",
