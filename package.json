@@ -55,14 +55,5 @@
     "tslib": "^2.8.0",
     "typescript": "^5.6.3",
     "unbuild": "^2.0.0"
-  },
-  "release-it": {
-    "git": {
-      "commitMessage": "chore: release v${version}"
-    },
-    "github": {
-      "release": true,
-      "releaseName": "v${version}"
-    }
   }
 }
