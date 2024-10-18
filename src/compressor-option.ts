@@ -1,6 +1,4 @@
-import type { CompressorOptions } from './type';
-
-export const defaultOptions: CompressorOptions = {
+export const defaultOptions = {
   strict: true,
   checkOrientation: true,
   retainExif: false,

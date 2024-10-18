@@ -32,7 +32,7 @@ export default class Compressor {
     this.exif = [];
     this.image = new Image();
     this.options = {
-      ...defaultOptions,
+      ...(defaultOptions as CompressorOptions),
       ...options
     };
     this.aborted = false;
@@ -183,10 +183,10 @@ export default class Compressor {
       (options.resize === 'contain' || options.resize === 'cover') &&
       isPositiveNumber(options.width ?? naturalWidth) &&
       isPositiveNumber(options.height ?? naturalHeight);
-    let maxWidth = Math.max(options.maxWidth, 0) || Infinity;
-    let maxHeight = Math.max(options.maxHeight, 0) || Infinity;
-    let minWidth = Math.max(options.minWidth, 0) || 0;
-    let minHeight = Math.max(options.minHeight, 0) || 0;
+    let maxWidth = Math.max(options.maxWidth ?? defaultOptions.maxWidth, 0) || Infinity;
+    let maxHeight = Math.max(options.maxHeight ?? defaultOptions.maxHeight, 0) || Infinity;
+    let minWidth = Math.max(options.minWidth ?? defaultOptions.minWidth, 0) || 0;
+    let minHeight = Math.max(options.minHeight ?? defaultOptions.minHeight, 0) || 0;
     let aspectRatio = naturalWidth / naturalHeight;
     let { width = 0, height = 0 } = options;
 
@@ -278,14 +278,19 @@ export default class Compressor {
     canvas.width = width;
     canvas.height = height;
 
-    if (!isImageType(options.mimeType)) {
+    if (!isImageType(options.mimeType ?? '')) {
       options.mimeType = file.type;
     }
 
     let fillStyle = 'transparent';
 
     // Converts PNG files over the `convertSize` to JPEGs.
-    if (file.size > options.convertSize && options.convertTypes.indexOf(options.mimeType) >= 0) {
+    if (
+      file.size > (options.convertSize ?? defaultOptions.convertSize) &&
+      (options.convertTypes ?? defaultOptions.convertTypes).indexOf(
+        options.mimeType ?? defaultOptions.mimeType
+      ) >= 0
+    ) {
       options.mimeType = 'image/jpeg';
     }
 
@@ -443,3 +448,5 @@ export default class Compressor {
     Object.assign(defaultOptions, options);
   }
 }
+
+export type { CompressorOptions }
