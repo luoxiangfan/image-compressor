@@ -88,7 +88,7 @@ export interface CompressorOptions {
    *   context.fillStyle = '#fff';
    * }
    */
-  beforeDraw:
+  beforeDraw?:
     | ((context: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => void)
     | null
     | undefined;
@@ -101,7 +101,10 @@ export interface CompressorOptions {
    *   context.filter = 'grayscale(100%)';
    * }
    */
-  drew: ((context: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => void) | null | undefined;
+  drew?:
+    | ((context: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => void)
+    | null
+    | undefined;
   /**
    * The hook function to execute when success to compress the image.
    * @param {File} file - The compressed image File object.

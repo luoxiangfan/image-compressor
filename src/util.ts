@@ -1,4 +1,5 @@
 import { WINDOW } from './constants';
+import type { CompressorOptions } from './type';
 
 export function isBlob(value: unknown): boolean {
   if (typeof Blob === 'undefined') {
@@ -211,8 +212,7 @@ export function getAdjustedSizes(
     width: number;
   },
 
-  // 'none' | 'contain' | 'cover'
-  type: 'none' | 'contain' | 'cover' = 'none'
+  type: CompressorOptions['resize'] = 'none'
 ) {
   const isValidWidth = isPositiveNumber(width);
   const isValidHeight = isPositiveNumber(height);

@@ -449,4 +449,4 @@ export default class Compressor {
   }
 }
 
-export type { CompressorOptions }
+export type { CompressorOptions };
