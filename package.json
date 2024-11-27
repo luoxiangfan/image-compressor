@@ -49,10 +49,10 @@
     "release": "npm run format && unbuild && release-it"
   },
   "devDependencies": {
-    "eslint": "^9.14.0",
-    "prettier": "^3.3.3",
+    "eslint": "^9.15.0",
+    "prettier": "^3.4.1",
     "release-it": "^17.10.0",
-    "typescript": "^5.6.3",
+    "typescript": "^5.7.2",
     "unbuild": "^2.0.0"
   }
 }
