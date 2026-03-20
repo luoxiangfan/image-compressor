@@ -403,7 +403,6 @@ export default class Compressor {
     if (URL && image.src.indexOf('blob:') === 0) {
       URL.revokeObjectURL(image.src);
     }
-    result = file as File;
 
     this.result = result;
 
