@@ -250,10 +250,10 @@ export default class Compressor {
       let srcHeight = naturalHeight;
       let _resize: CompressorOptions['resize'] = undefined;
       if (options.resize === 'contain') {
-        _resize === 'cover';
+        _resize = 'cover';
       }
       if (options.resize === 'cover') {
-        _resize === 'contain';
+        _resize = 'contain';
       }
       ({ width: srcWidth, height: srcHeight } = getAdjustedSizes(
         {
