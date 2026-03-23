@@ -398,7 +398,7 @@ export default class Compressor {
     naturalHeight: number;
     result: File;
   }) {
-    const { file, image, options } = this;
+    const { image, options } = this;
 
     if (URL && image.src.indexOf('blob:') === 0) {
       URL.revokeObjectURL(image.src);
