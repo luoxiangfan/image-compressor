@@ -49,7 +49,7 @@
     "release": "unbuild && npm publish"
   },
   "devDependencies": {
-    "eslint": "^10.1.0",
+    "eslint": "^10.2.0",
     "jiti": "^2.6.1",
     "prettier": "^3.8.1",
     "typescript": "^6.0.2",
