@@ -8,7 +8,8 @@ export function isBlob(value: unknown): boolean {
   return value instanceof Blob || Object.prototype.toString.call(value) === '[object Blob]';
 }
 
-export const isPositiveNumber = (value: number) => value > 0 && value < Infinity;
+export const isPositiveNumber = (value: number | undefined): value is number =>
+  value !== undefined && value > 0 && value < Infinity;
 
 const { slice } = Array.prototype;
 
@@ -31,6 +32,8 @@ export function imageTypeToExtension(value: string) {
 
   return `.${extension}`;
 }
+
+export const REGEXP_EXTENSION = /\.\w+$/;
 
 const { fromCharCode } = String;
 
@@ -208,35 +211,37 @@ export function getAdjustedSizes(
     width
   }: {
     aspectRatio: number;
-    height: number;
-    width: number;
+    height?: number;
+    width?: number;
   },
-
   type: CompressorOptions['resize'] = 'none'
-) {
-  const isValidWidth = isPositiveNumber(width);
-  const isValidHeight = isPositiveNumber(height);
-
-  if (isValidWidth && isValidHeight) {
-    const adjustedWidth = height * aspectRatio;
+): { width?: number; height?: number } {
+  let nextWidth = width;
+  let nextHeight = height;
+  if (isPositiveNumber(nextWidth) && isPositiveNumber(nextHeight)) {
+    const validWidth = nextWidth;
+    const validHeight = nextHeight;
+    const adjustedWidth = validHeight * aspectRatio;
 
     if (
-      ((type === 'contain' || type === 'none') && adjustedWidth > width) ||
-      (type === 'cover' && adjustedWidth < width)
+      ((type === 'contain' || type === 'none') && adjustedWidth > validWidth) ||
+      (type === 'cover' && adjustedWidth < validWidth)
     ) {
-      height = width / aspectRatio;
+      nextHeight = validWidth / aspectRatio;
+      nextWidth = validWidth;
     } else {
-      width = height * aspectRatio;
+      nextWidth = validHeight * aspectRatio;
+      nextHeight = validHeight;
     }
-  } else if (isValidWidth) {
-    height = width / aspectRatio;
-  } else if (isValidHeight) {
-    width = height * aspectRatio;
+  } else if (isPositiveNumber(nextWidth)) {
+    nextHeight = nextWidth / aspectRatio;
+  } else if (isPositiveNumber(nextHeight)) {
+    nextWidth = nextHeight * aspectRatio;
   }
 
   return {
-    width,
-    height
+    width: nextWidth,
+    height: nextHeight
   };
 }
 

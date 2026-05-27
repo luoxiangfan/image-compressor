@@ -10,7 +10,9 @@ import {
   parseOrientation,
   resetAndGetOrientation,
   getExif,
-  insertExif
+  insertExif,
+  imageTypeToExtension,
+  REGEXP_EXTENSION
 } from './util';
 import { WINDOW } from './constants';
 import type { CompressorOptions } from './type';
@@ -179,16 +181,19 @@ export default class Compressor {
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
     const is90DegreesRotated = Math.abs(rotate) % 180 === 90;
+    const optionWidth = options.width;
+    const optionHeight = options.height;
     const resizable =
       (options.resize === 'contain' || options.resize === 'cover') &&
-      isPositiveNumber(options.width ?? naturalWidth) &&
-      isPositiveNumber(options.height ?? naturalHeight);
+      isPositiveNumber(optionWidth) &&
+      isPositiveNumber(optionHeight);
     let maxWidth = Math.max(options.maxWidth ?? defaultOptions.maxWidth, 0) || Infinity;
     let maxHeight = Math.max(options.maxHeight ?? defaultOptions.maxHeight, 0) || Infinity;
     let minWidth = Math.max(options.minWidth ?? defaultOptions.minWidth, 0) || 0;
     let minHeight = Math.max(options.minHeight ?? defaultOptions.minHeight, 0) || 0;
     let aspectRatio = naturalWidth / naturalHeight;
-    let { width = 0, height = 0 } = options;
+    let width = options.width;
+    let height = options.height;
 
     if (is90DegreesRotated) {
       [maxWidth, maxHeight] = [maxHeight, maxWidth];
@@ -197,10 +202,10 @@ export default class Compressor {
     }
 
     if (resizable) {
-      aspectRatio = width / height;
+      aspectRatio = optionWidth / optionHeight;
     }
 
-    ({ width: maxWidth, height: maxHeight } = getAdjustedSizes(
+    ({ width: maxWidth = maxWidth, height: maxHeight = maxHeight } = getAdjustedSizes(
       {
         aspectRatio,
         width: maxWidth,
@@ -208,7 +213,7 @@ export default class Compressor {
       },
       'contain'
     ));
-    ({ width: minWidth, height: minHeight } = getAdjustedSizes(
+    ({ width: minWidth = minWidth, height: minHeight = minHeight } = getAdjustedSizes(
       {
         aspectRatio,
         width: minWidth,
@@ -217,30 +222,43 @@ export default class Compressor {
       'cover'
     ));
 
+    let outputWidth: number;
+    let outputHeight: number;
+
     if (resizable) {
-      ({ width, height } = getAdjustedSizes(
+      const sized = getAdjustedSizes(
         {
           aspectRatio,
-          width,
-          height
+          width: optionWidth,
+          height: optionHeight
         },
         options.resize
-      ));
+      );
+
+      outputWidth = sized.width ?? optionWidth;
+      outputHeight = sized.height ?? optionHeight;
     } else {
-      ({ width = naturalWidth, height = naturalHeight } = getAdjustedSizes({
+      const sized = getAdjustedSizes({
         aspectRatio,
         width,
         height
-      }));
+      });
+
+      outputWidth = sized.width ?? naturalWidth;
+      outputHeight = sized.height ?? naturalHeight;
     }
 
-    width = Math.floor(normalizeDecimalNumber(Math.min(Math.max(width, minWidth), maxWidth)));
-    height = Math.floor(normalizeDecimalNumber(Math.min(Math.max(height, minHeight), maxHeight)));
+    outputWidth = Math.floor(
+      normalizeDecimalNumber(Math.min(Math.max(outputWidth, minWidth), maxWidth))
+    );
+    outputHeight = Math.floor(
+      normalizeDecimalNumber(Math.min(Math.max(outputHeight, minHeight), maxHeight))
+    );
 
-    const destX = -width / 2;
-    const destY = -height / 2;
-    const destWidth = width;
-    const destHeight = height;
+    const destX = -outputWidth / 2;
+    const destY = -outputHeight / 2;
+    const destWidth = outputWidth;
+    const destHeight = outputHeight;
     const params = [];
 
     if (resizable) {
@@ -255,14 +273,17 @@ export default class Compressor {
       if (options.resize === 'cover') {
         _resize = 'contain';
       }
-      ({ width: srcWidth, height: srcHeight } = getAdjustedSizes(
+      const srcSized = getAdjustedSizes(
         {
           aspectRatio,
           width: naturalWidth,
           height: naturalHeight
         },
         _resize
-      ));
+      );
+
+      srcWidth = srcSized.width ?? naturalWidth;
+      srcHeight = srcSized.height ?? naturalHeight;
       srcX = (naturalWidth - srcWidth) / 2;
       srcY = (naturalHeight - srcHeight) / 2;
 
@@ -272,11 +293,11 @@ export default class Compressor {
     params.push(destX, destY, destWidth, destHeight);
 
     if (is90DegreesRotated) {
-      [width, height] = [height, width];
+      [outputWidth, outputHeight] = [outputHeight, outputWidth];
     }
 
-    canvas.width = width;
-    canvas.height = height;
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
 
     if (!isImageType(options.mimeType ?? '')) {
       options.mimeType = file.type;
@@ -303,7 +324,7 @@ export default class Compressor {
     // Override the default fill color (#000, black)
     if (context) {
       context.fillStyle = fillStyle;
-      context.fillRect(0, 0, width, height);
+      context.fillRect(0, 0, outputWidth, outputHeight);
     }
 
     if (options.beforeDraw && context) {
@@ -316,7 +337,7 @@ export default class Compressor {
 
     if (context) {
       context.save();
-      context.translate(width / 2, height / 2);
+      context.translate(outputWidth / 2, outputHeight / 2);
       context.rotate((rotate * Math.PI) / 180);
       context.scale(scaleX, scaleY);
       // @ts-ignore
@@ -392,22 +413,62 @@ export default class Compressor {
   done({
     naturalWidth,
     naturalHeight,
-    result
+    result: initialResult
   }: {
     naturalWidth: number;
     naturalHeight: number;
-    result: File;
+    result: File | Blob;
   }) {
-    const { image, options } = this;
+    const { file, image, options } = this;
+    let result = initialResult;
 
     if (URL && image.src.indexOf('blob:') === 0) {
       URL.revokeObjectURL(image.src);
     }
 
+    if (result) {
+      if (
+        options.strict &&
+        !options.retainExif &&
+        result.size > file.size &&
+        options.mimeType === file.type &&
+        !(
+          (options.width ?? 0) > naturalWidth ||
+          (options.height ?? 0) > naturalHeight ||
+          (options.minWidth ?? 0) > naturalWidth ||
+          (options.minHeight ?? 0) > naturalHeight ||
+          (options.maxWidth ?? Infinity) < naturalWidth ||
+          (options.maxHeight ?? Infinity) < naturalHeight
+        )
+      ) {
+        result = file;
+      } else {
+        const date = new Date();
+
+        // @ts-expect-error Blob may be augmented with File-like metadata in browsers
+        result.lastModified = date.getTime();
+        // @ts-expect-error legacy File API
+        result.lastModifiedDate = date;
+        // @ts-expect-error Blob may be augmented with File-like metadata in browsers
+        result.name = (file as File).name;
+
+        if (
+          // @ts-expect-error Blob may be augmented with File-like metadata in browsers
+          result.name &&
+          result.type !== file.type
+        ) {
+          // @ts-expect-error Blob may be augmented with File-like metadata in browsers
+          result.name = result.name.replace(REGEXP_EXTENSION, imageTypeToExtension(result.type));
+        }
+      }
+    } else {
+      result = file;
+    }
+
     this.result = result;
 
     if (options.success) {
-      options.success.call(this, result);
+      options.success.call(this, result as File);
     }
   }
 
