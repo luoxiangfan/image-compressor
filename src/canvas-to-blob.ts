@@ -60,7 +60,11 @@ const dataURLtoBlob =
     }
     // Write the ArrayBuffer (or ArrayBufferView) to a blob:
     if (hasBlobConstructor) {
-      return new Blob([hasArrayBufferViewSupport ? intArray : arrayBuffer], {
+      const blobParts: BlobPart[] = hasArrayBufferViewSupport
+        ? [intArray as BlobPart]
+        : [arrayBuffer];
+
+      return new Blob(blobParts, {
         type: mediaType
       });
     }

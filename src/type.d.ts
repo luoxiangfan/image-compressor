@@ -113,7 +113,7 @@ export interface CompressorOptions {
    *   console.log(file);
    * }
    */
-  success: ((file: File) => void) | null | undefined;
+  success?: ((file: File) => void) | null;
   /**
    * The hook function to execute when fail to compress the image.
    * @type {Function}
@@ -123,5 +123,5 @@ export interface CompressorOptions {
    *   console.log(err.message);
    * }
    */
-  error: ((error: Error) => void) | null | undefined;
+  error?: ((error: Error) => void) | null;
 }

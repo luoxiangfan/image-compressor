@@ -27,9 +27,9 @@ export default class Compressor {
   image: HTMLImageElement;
   aborted: boolean;
   exif: any[];
-  result: any;
+  result: File | null;
   reader: FileReader | null;
-  constructor(file: File | Blob, options: CompressorOptions) {
+  constructor(file: File | Blob, options?: CompressorOptions) {
     this.file = file;
     this.exif = [];
     this.image = new Image();
@@ -410,6 +410,25 @@ export default class Compressor {
     }
   }
 
+  toOutputFile(blob: Blob): File {
+    const { file, options } = this;
+    const sourceName = file instanceof File ? file.name : 'blob';
+    let fileName = sourceName;
+
+    if (blob.type && blob.type !== file.type) {
+      fileName = sourceName.replace(REGEXP_EXTENSION, imageTypeToExtension(blob.type));
+    }
+
+    return new File([blob], fileName, {
+      type: blob.type || options.mimeType || file.type,
+      lastModified: Date.now()
+    });
+  }
+
+  toResultFile(blob: File | Blob): File {
+    return blob instanceof File ? blob : this.toOutputFile(blob);
+  }
+
   done({
     naturalWidth,
     naturalHeight,
@@ -417,20 +436,20 @@ export default class Compressor {
   }: {
     naturalWidth: number;
     naturalHeight: number;
-    result: File | Blob;
+    result: File | Blob | null;
   }) {
     const { file, image, options } = this;
-    let result = initialResult;
+    let result: File;
 
     if (URL && image.src.indexOf('blob:') === 0) {
       URL.revokeObjectURL(image.src);
     }
 
-    if (result) {
+    if (initialResult) {
       if (
         options.strict &&
         !options.retainExif &&
-        result.size > file.size &&
+        initialResult.size > file.size &&
         options.mimeType === file.type &&
         !(
           (options.width ?? 0) > naturalWidth ||
@@ -441,34 +460,18 @@ export default class Compressor {
           (options.maxHeight ?? Infinity) < naturalHeight
         )
       ) {
-        result = file;
+        result = this.toResultFile(file);
       } else {
-        const date = new Date();
-
-        // @ts-expect-error Blob may be augmented with File-like metadata in browsers
-        result.lastModified = date.getTime();
-        // @ts-expect-error legacy File API
-        result.lastModifiedDate = date;
-        // @ts-expect-error Blob may be augmented with File-like metadata in browsers
-        result.name = (file as File).name;
-
-        if (
-          // @ts-expect-error Blob may be augmented with File-like metadata in browsers
-          result.name &&
-          result.type !== file.type
-        ) {
-          // @ts-expect-error Blob may be augmented with File-like metadata in browsers
-          result.name = result.name.replace(REGEXP_EXTENSION, imageTypeToExtension(result.type));
-        }
+        result = this.toOutputFile(initialResult);
       }
     } else {
-      result = file;
+      result = this.toResultFile(file);
     }
 
     this.result = result;
 
     if (options.success) {
-      options.success.call(this, result as File);
+      options.success.call(this, result);
     }
   }
 
